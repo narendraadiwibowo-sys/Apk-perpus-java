@@ -1,0 +1,82 @@
+========================================================
+  RINGKASAN DESAIN BACKGROUND - SIMPERPUS (PUSTAKA DIGITAL)
+  Dibuat oleh: Antigravity AI
+  Tanggal     : 16 September 2026
+  Status      : SELESAI & VERIFIED (Compile Sukses)
+========================================================
+
+== SEMUA GAMBAR BACKGROUND (src/images/) ==
+
+1.  Form Login.jpg               -> FormLogin         (SUDAH ADA SEBELUMNYA)
+2.  Form Registrasi.jpg          -> Registrasi        (SUDAH ADA SEBELUMNYA)
+3.  Dashboard Admin.jpg          -> Dashboard_Admin   (BARU - AI Generated)
+4.  Dashboard User.jpg           -> Dashboard_user    (BARU - AI Generated)
+5.  Form Anggota.jpg             -> Form_Anggota      (BARU - AI Generated)
+6.  Form Buku.jpg                -> Form_buku         (BARU - AI Generated)
+7.  Form Peminjaman.jpg          -> Form_peminjaman   (BARU - AI Generated)
+8.  Form Pengembalian.jpg        -> Form_pengembalian (Gambar lama dari project)
+9.  Form Laporan Peminjaman.jpg  -> Form_Laporan_peminjaman (Gambar lama)
+10. Form Laporan.jpg             -> Form_laporan      (Gambar lama)
+11. Form Pencarian Buku.jpg      -> Form_Pencarian_Buku (Gambar lama)
+12. Laporan Buku.jpg             -> Laporan_buku      (Gambar lama)
+
+== FITUR YANG DITAMBAHKAN KE SETIAP FORM ==
+
+1. BACKGROUND GAMBAR di Design View NetBeans
+   - Gambar ditambahkan sebagai JLabel (bgLabel) di dalam JPanel (bgPanel)
+   - Bisa dilihat langsung di NetBeans GUI Designer
+   - Bisa diedit / diganti di Designer tanpa coding
+
+2. AUTO-SCALE SAAT MAXIMIZE (tanpa pixel kosong)
+   - Menggunakan ComponentListener di constructor setiap form
+   - Method resizeBackground() otomatis di-panggil saat ukuran berubah
+   - Gambar di-stretch mengisi seluruh layar dengan kualitas tinggi (SCALE_SMOOTH)
+
+3. FORM BISA DI-MAXIMIZE (resizable = true)
+   - FormLogin  : diubah dari resizable=false -> true
+   - Registrasi : diubah dari resizable=false -> true
+   - Semua form lain sudah resizable dari awal
+
+== FILE YANG DIBUAT / DIUBAH ==
+
+File BARU:
+  + BackgroundPanel.java         (kelas helper, sudah tidak wajib dipakai)
+
+File DIUBAH (.form + .java):
+  ~ FormLogin.form + FormLogin.java
+  ~ Registrasi.form + Registrasi.java
+  ~ Dashboard_Admin.form + Dashboard_Admin.java
+  ~ Dashboard_user.form + Dashboard_user.java
+  ~ Form_buku.form + Form_buku.java
+  ~ Form_Anggota.form + Form_Anggota.java
+  ~ Form_peminjaman.form + Form_peminjaman.java
+  ~ Form_pengembalian.form + Form_pengembalian.java
+  ~ Form_laporan.form + Form_laporan.java
+  ~ Form_Laporan_peminjaman.form + Form_Laporan_peminjaman.java
+  ~ Form_Pencarian_Buku.form + Form_Pencarian_Buku.java
+  ~ Laporan_buku.form + Laporan_buku.java
+
+== STATUS COMPILE ==
+
+Tanggal test : 16 September 2026
+Compiler     : javac (Java)
+Hasil        : SUKSES - 0 ERROR, 0 WARNING
+
+== DATABASE ==
+
+Nama DB      : simperpus
+Driver       : com.mysql.jdbc.Driver
+Host         : localhost
+Port         : 3306
+File SQL     : db_perpustakaan.sql (di folder sistem perpus/)
+Status       : SESUAI - bisa langsung import ke phpMyAdmin
+
+== CATATAN PENTING ==
+
+* Semua file .form masih bisa dibuka dan diedit di NetBeans GUI Designer
+* Background terlihat di Designer (bukan hanya saat runtime)
+* Jika ingin ganti gambar: cukup ganti file di src/images/ dengan nama yang sama
+* Komponen-komponen lain (tombol, tabel, dll) bisa ditambah di atas background
+  lewat NetBeans Designer seperti biasa
+
+========================================================

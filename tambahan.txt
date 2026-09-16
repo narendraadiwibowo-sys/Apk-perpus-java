@@ -1,0 +1,28 @@
+ogika Registrasi (Registrasi.java): Berhubung desain form registrasi Anda belum memiliki kotak input (masih kosong), saya tidak mengubah desainnya. Namun, saya sudah menyiapkan fungsi logika bernama prosesRegistrasi(String username, String password) di dalam file tersebut. Fungsi ini memiliki logika:
+
+Mengecek ke database apakah sudah ada akun dengan level = "1".
+Jika belum ada, maka akun yang sedang dibuat akan menjadi admin (level = "1").
+Jika sudah ada admin, maka berapapun akun yang dibuat selanjutnya akan otomatis menjadi pengguna biasa (level = "2").
+Nantinya, setelah Anda membuat kotak isian username, password, dan tombol simpan di halaman Registrasi.java pada Netbeans, Anda cukup memanggil fungsi tersebut di dalam aksi tombol simpan Anda seperti ini:
+
+java
+prosesRegistrasi(txt_username.getText(), txt_password.getText());
+
+Pengaturan Database (Sesuai permintaan Anda)
+Agar logikanya bisa berjalan, pastikan tabel login Anda di database simperp memiliki kolom level. Jika Anda menggunakan phpMyAdmin atau MySQL, Anda bisa menjalankan perintah SQL ini untuk menambahkan atau memperbarui tabel:
+
+Jika tabel login belum ada:
+
+sql
+CREATE TABLE login (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL,
+    password VARCHAR(50) NOT NULL,
+    level ENUM('1', '2') DEFAULT '2'
+);
+
+
+Jika tabel login sudah ada tapi belum memiliki kolom level: Silakan jalankan query ini untuk menambahkan kolomnya:
+
+sql
+ALTER TABLE login ADD COLUMN level ENUM('1', '2') DEFAULT '2';
