@@ -1,5 +1,9 @@
 package sistemperpustakaan;
 
+import java.sql.*;
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+
 /*
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
@@ -12,12 +16,83 @@ package sistemperpustakaan;
 public class Laporan_buku extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(Laporan_buku.class.getName());
+    private Connection con;
 
     /**
      * Creates new form Laporan_buku
      */
     public Laporan_buku() {
         initComponents();
+        initDB();
+        loadLaporanBuku();
+    }
+
+    private void initDB() {
+        try {
+            con = Config.configDB();
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Koneksi database gagal: " + e.getMessage());
+        }
+    }
+
+    private void loadLaporanBuku() {
+        DefaultTableModel model = new DefaultTableModel(
+            new String[]{"ISBN / Kode", "Judul Buku", "Penulis", "Penerbit", "Kategori", "Tahun", "Total Stok", "Tersedia"}, 0
+        ) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+
+        try {
+            if (con == null || con.isClosed()) initDB();
+
+            String sql = "SELECT b.isbn, b.judul, "
+                       + "IFNULL(GROUP_CONCAT(pn.nama_penulis SEPARATOR ', '), '-') AS penulis, "
+                       + "IFNULL(pb.nama_penerbit, '-') AS penerbit, "
+                       + "IFNULL(k.nama_kategori, '-') AS kategori, "
+                       + "IFNULL(b.tahun_terbit, '-') AS tahun, "
+                       + "b.stok_total, b.stok_tersedia "
+                       + "FROM buku b "
+                       + "LEFT JOIN buku_penulis bp ON b.id_buku = bp.id_buku "
+                       + "LEFT JOIN penulis pn ON bp.id_penulis = pn.id_penulis "
+                       + "LEFT JOIN penerbit pb ON b.id_penerbit = pb.id_penerbit "
+                       + "LEFT JOIN kategori k ON b.id_kategori = k.id_kategori "
+                       + "GROUP BY b.id_buku ORDER BY b.judul ASC";
+
+            try (Statement st = con.createStatement(); ResultSet rs = st.executeQuery(sql)) {
+                while (rs.next()) {
+                    model.addRow(new Object[]{
+                        rs.getString("isbn"),
+                        rs.getString("judul"),
+                        rs.getString("penulis"),
+                        rs.getString("penerbit"),
+                        rs.getString("kategori"),
+                        rs.getString("tahun"),
+                        rs.getInt("stok_total"),
+                        rs.getInt("stok_tersedia")
+                    });
+                }
+            }
+        } catch (SQLException e) {
+            // Fallback ke tabel buku lama
+            try {
+                String sqlOld = "SELECT kode_buku, judul, pengarang, penerbit, kategori, '-' AS tahun, stok, stok FROM buku";
+                try (Statement st = con.createStatement(); ResultSet rs = st.executeQuery(sqlOld)) {
+                    while (rs.next()) {
+                        model.addRow(new Object[]{
+                            rs.getString(1),
+                            rs.getString(2),
+                            rs.getString(3),
+                            rs.getString(4),
+                            rs.getString(5),
+                            rs.getString(6),
+                            rs.getInt(7),
+                            rs.getInt(8)
+                        });
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+        jTable1.setModel(model);
     }
 
     /**

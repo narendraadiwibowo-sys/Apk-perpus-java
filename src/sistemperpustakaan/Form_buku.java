@@ -5,6 +5,10 @@ package sistemperpustakaan;
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
 
+import java.sql.*;
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+
 /**
  *
  * @author PC-1B LKS-2026
@@ -13,11 +17,242 @@ public class Form_buku extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(Form_buku.class.getName());
 
+    // Koneksi database
+    private Connection con;
+
     /**
      * Creates new form Form_buku
      */
     public Form_buku() {
         initComponents();
+        initDB();
+        setupKategori();
+        loadTable();
+        setupTableListener();
+        setupButtonEdit();
+        setupButtonHapus();
+    }
+
+    // ===================== INISIALISASI DB =====================
+    private void initDB() {
+        try {
+            con = Config.configDB();
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Koneksi database gagal: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // ===================== ISI KOMBOBOX KATEGORI =====================
+    private void setupKategori() {
+        jComboBox1.setModel(new DefaultComboBoxModel<>(new String[]{
+            "Teknologi", "Sains", "Sejarah", "Matematika",
+            "Bahasa", "Agama", "Fiksi", "Non-Fiksi", "Lainnya"
+        }));
+    }
+
+    // ===================== READ - Load data ke tabel =====================
+    private void loadTable() {
+        DefaultTableModel model = new DefaultTableModel(
+            new String[]{"Kode Buku", "Judul", "Pengarang", "Penerbit", "Kategori"}, 0
+        ) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+        try {
+            if (con == null || con.isClosed()) initDB();
+            String sql = "SELECT kode_buku, judul, pengarang, penerbit, kategori FROM buku ORDER BY kode_buku";
+            try (Statement st = con.createStatement();
+                 ResultSet rs = st.executeQuery(sql)) {
+                while (rs.next()) {
+                    model.addRow(new Object[]{
+                        rs.getString("kode_buku"),
+                        rs.getString("judul"),
+                        rs.getString("pengarang"),
+                        rs.getString("penerbit"),
+                        rs.getString("kategori")
+                    });
+                }
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal memuat data: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+        jTable1.setModel(model);
+    }
+
+    // ===================== Klik baris tabel → isi form =====================
+    private void setupTableListener() {
+        jTable1.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting() && jTable1.getSelectedRow() >= 0) {
+                int row = jTable1.getSelectedRow();
+                jTextField1.setText(jTable1.getValueAt(row, 0).toString()); // kode
+                jTextField2.setText(jTable1.getValueAt(row, 1).toString()); // judul
+                jTextField3.setText(jTable1.getValueAt(row, 2).toString()); // pengarang
+                jTextField4.setText(jTable1.getValueAt(row, 3).toString()); // penerbit
+                jComboBox1.setSelectedItem(jTable1.getValueAt(row, 4).toString()); // kategori
+            }
+        });
+    }
+
+    // ===================== Tambahkan listener Edit & Hapus =====================
+    private void setupButtonEdit() {
+        jButton3.addActionListener(e -> updateBuku());
+    }
+
+    private void setupButtonHapus() {
+        jButton4.addActionListener(e -> deleteBuku());
+    }
+
+    // ===================== CREATE / Simpan =====================
+    private void simpanBuku() {
+        String kode     = jTextField1.getText().trim();
+        String judul    = jTextField2.getText().trim();
+        String pengarang = jTextField3.getText().trim();
+        String penerbit = jTextField4.getText().trim();
+        String kategori = jComboBox1.getSelectedItem().toString();
+
+        if (kode.isEmpty() || judul.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Kode Buku dan Judul wajib diisi!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        try {
+            if (con == null || con.isClosed()) initDB();
+            // Cek duplikat
+            String cek = "SELECT kode_buku FROM buku WHERE kode_buku = ?";
+            try (PreparedStatement ps = con.prepareStatement(cek)) {
+                ps.setString(1, kode);
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) {
+                    JOptionPane.showMessageDialog(this, "Kode Buku sudah ada! Gunakan tombol Edit.", "Info", JOptionPane.INFORMATION_MESSAGE);
+                    return;
+                }
+            }
+            String sql = "INSERT INTO buku (kode_buku, judul, pengarang, penerbit, kategori) VALUES (?,?,?,?,?)";
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setString(1, kode);
+                ps.setString(2, judul);
+                ps.setString(3, pengarang);
+                ps.setString(4, penerbit);
+                ps.setString(5, kategori);
+                ps.executeUpdate();
+                JOptionPane.showMessageDialog(this, "Data buku berhasil disimpan!", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+                resetForm();
+                loadTable();
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal simpan: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // ===================== UPDATE / Edit =====================
+    private void updateBuku() {
+        String kode     = jTextField1.getText().trim();
+        String judul    = jTextField2.getText().trim();
+        String pengarang = jTextField3.getText().trim();
+        String penerbit = jTextField4.getText().trim();
+        String kategori = jComboBox1.getSelectedItem().toString();
+
+        if (kode.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Pilih data dari tabel atau isi Kode Buku terlebih dahulu!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        int konfirmasi = JOptionPane.showConfirmDialog(this, "Update data buku ini?", "Konfirmasi", JOptionPane.YES_NO_OPTION);
+        if (konfirmasi != JOptionPane.YES_OPTION) return;
+
+        try {
+            if (con == null || con.isClosed()) initDB();
+            String sql = "UPDATE buku SET judul=?, pengarang=?, penerbit=?, kategori=? WHERE kode_buku=?";
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setString(1, judul);
+                ps.setString(2, pengarang);
+                ps.setString(3, penerbit);
+                ps.setString(4, kategori);
+                ps.setString(5, kode);
+                int rows = ps.executeUpdate();
+                if (rows > 0) {
+                    JOptionPane.showMessageDialog(this, "Data buku berhasil diupdate!", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+                    resetForm();
+                    loadTable();
+                } else {
+                    JOptionPane.showMessageDialog(this, "Kode buku tidak ditemukan!", "Info", JOptionPane.INFORMATION_MESSAGE);
+                }
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal update: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // ===================== DELETE / Hapus =====================
+    private void deleteBuku() {
+        String kode = jTextField1.getText().trim();
+        if (kode.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Pilih data dari tabel terlebih dahulu!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        int konfirmasi = JOptionPane.showConfirmDialog(this, "Yakin ingin menghapus buku dengan kode: " + kode + "?", "Konfirmasi Hapus", JOptionPane.YES_NO_OPTION);
+        if (konfirmasi != JOptionPane.YES_OPTION) return;
+
+        try {
+            if (con == null || con.isClosed()) initDB();
+            String sql = "DELETE FROM buku WHERE kode_buku = ?";
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setString(1, kode);
+                int rows = ps.executeUpdate();
+                if (rows > 0) {
+                    JOptionPane.showMessageDialog(this, "Data buku berhasil dihapus!", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+                    resetForm();
+                    loadTable();
+                } else {
+                    JOptionPane.showMessageDialog(this, "Kode buku tidak ditemukan!", "Info", JOptionPane.INFORMATION_MESSAGE);
+                }
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal hapus: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // ===================== SEARCH / Cari =====================
+    private void cariBuku(String keyword) {
+        DefaultTableModel model = new DefaultTableModel(
+            new String[]{"Kode Buku", "Judul", "Pengarang", "Penerbit", "Kategori"}, 0
+        ) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+        try {
+            if (con == null || con.isClosed()) initDB();
+            String sql = "SELECT kode_buku, judul, pengarang, penerbit, kategori FROM buku "
+                       + "WHERE kode_buku LIKE ? OR judul LIKE ? OR pengarang LIKE ? OR kategori LIKE ?";
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                String like = "%" + keyword + "%";
+                ps.setString(1, like);
+                ps.setString(2, like);
+                ps.setString(3, like);
+                ps.setString(4, like);
+                ResultSet rs = ps.executeQuery();
+                while (rs.next()) {
+                    model.addRow(new Object[]{
+                        rs.getString("kode_buku"),
+                        rs.getString("judul"),
+                        rs.getString("pengarang"),
+                        rs.getString("penerbit"),
+                        rs.getString("kategori")
+                    });
+                }
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal cari: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+        jTable1.setModel(model);
+    }
+
+    // ===================== RESET form =====================
+    private void resetForm() {
+        jTextField1.setText("");
+        jTextField2.setText("");
+        jTextField3.setText("");
+        jTextField4.setText("");
+        jTextField5.setText("");
+        jComboBox1.setSelectedIndex(0);
+        jTable1.clearSelection();
     }
 
     /**
@@ -270,31 +505,36 @@ public class Form_buku extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jTextField1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField1ActionPerformed
-        // TODO add your handling code here:
+        // Tekan Enter di kode buku → langsung cari
     }//GEN-LAST:event_jTextField1ActionPerformed
 
     private void jTextField4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField4ActionPerformed
-        // TODO add your handling code here:
+        // Tidak digunakan
     }//GEN-LAST:event_jTextField4ActionPerformed
 
     private void jComboBox1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jComboBox1ActionPerformed
-        // TODO add your handling code here:
+        // Tidak digunakan
     }//GEN-LAST:event_jComboBox1ActionPerformed
 
     private void jTextField5ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField5ActionPerformed
-        // TODO add your handling code here:
+        // Tekan Enter di kolom cari → langsung cari
+        cariBuku(jTextField5.getText().trim());
     }//GEN-LAST:event_jTextField5ActionPerformed
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        // TODO add your handling code here:
+        // Tombol Cari
+        cariBuku(jTextField5.getText().trim());
     }//GEN-LAST:event_jButton1ActionPerformed
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
-        // TODO add your handling code here:
+        // Tombol Simpan
+        simpanBuku();
     }//GEN-LAST:event_jButton2ActionPerformed
 
     private void jButton5ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton5ActionPerformed
-        // TODO add your handling code here:
+        // Tombol Reset
+        resetForm();
+        loadTable();
     }//GEN-LAST:event_jButton5ActionPerformed
 
     /**

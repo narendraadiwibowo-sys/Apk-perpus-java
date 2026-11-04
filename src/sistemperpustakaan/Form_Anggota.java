@@ -1,5 +1,9 @@
 package sistemperpustakaan;
 
+import java.sql.*;
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+
 /*
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
@@ -12,12 +16,281 @@ package sistemperpustakaan;
 public class Form_Anggota extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(Form_Anggota.class.getName());
+    private Connection con;
 
     /**
      * Creates new form Form_Anggota
      */
     public Form_Anggota() {
         initComponents();
+        initDB();
+        initCustomListeners();
+        loadTable();
+    }
+
+    private void initDB() {
+        try {
+            con = Config.configDB();
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Koneksi database gagal: " + e.getMessage());
+        }
+    }
+
+    private void initCustomListeners() {
+        b_tambah.addActionListener(e -> tambahAnggota());
+        b_update.addActionListener(e -> updateAnggota());
+        b_hapus.addActionListener(e -> hapusAnggota());
+        b_cari.addActionListener(e -> cariAnggota());
+
+        jTable1.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting() && jTable1.getSelectedRow() >= 0) {
+                int r = jTable1.getSelectedRow();
+                t_nis.setText(jTable1.getValueAt(r, 0).toString());
+                t_nama.setText(jTable1.getValueAt(r, 1).toString());
+                String tipe = jTable1.getValueAt(r, 2) != null ? jTable1.getValueAt(r, 2).toString() : "Siswa";
+                for (int i = 0; i < jComboBox1.getItemCount(); i++) {
+                    if (jComboBox1.getItemAt(i).equalsIgnoreCase(tipe)) {
+                        jComboBox1.setSelectedIndex(i);
+                        break;
+                    }
+                }
+                t_buku.setText(jTable1.getValueAt(r, 3) != null ? jTable1.getValueAt(r, 3).toString() : "0");
+                t_nomor.setText(jTable1.getValueAt(r, 4) != null ? jTable1.getValueAt(r, 4).toString() : "");
+            }
+        });
+    }
+
+    private void loadTable() {
+        DefaultTableModel model = new DefaultTableModel(
+            new String[]{"NIS / No Induk", "Nama Lengkap", "Tipe Anggota", "Buku Dipinjam", "No HP"}, 0
+        ) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+
+        try {
+            if (con == null || con.isClosed()) initDB();
+            String sql = "SELECT a.nomor_induk, p.nama_lengkap, a.tipe_anggota, p.no_hp, "
+                       + "(SELECT COUNT(*) FROM peminjaman pm WHERE pm.id_anggota = a.id_anggota AND pm.status_peminjaman = 'Dipinjam') AS pinjam_count "
+                       + "FROM anggota a "
+                       + "JOIN pengguna p ON a.id_user = p.id_user "
+                       + "ORDER BY a.nomor_induk ASC";
+            try (Statement st = con.createStatement(); ResultSet rs = st.executeQuery(sql)) {
+                while (rs.next()) {
+                    model.addRow(new Object[]{
+                        rs.getString("nomor_induk"),
+                        rs.getString("nama_lengkap"),
+                        rs.getString("tipe_anggota"),
+                        rs.getInt("pinjam_count"),
+                        rs.getString("no_hp")
+                    });
+                }
+            }
+        } catch (SQLException e) {
+            try {
+                String sqlOld = "SELECT * FROM anggota";
+                try (Statement st = con.createStatement(); ResultSet rs = st.executeQuery(sqlOld)) {
+                    while (rs.next()) {
+                        model.addRow(new Object[]{
+                            rs.getString(1),
+                            rs.getString(2),
+                            rs.getString(3),
+                            0,
+                            rs.getString(4)
+                        });
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+        jTable1.setModel(model);
+    }
+
+    private void tambahAnggota() {
+        String nis = t_nis.getText().trim();
+        String nama = t_nama.getText().trim();
+        String tipe = jComboBox1.getSelectedItem() != null ? jComboBox1.getSelectedItem().toString() : "Siswa";
+        String noHp = t_nomor.getText().trim();
+
+        if (nis.isEmpty() || nama.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "NIS dan Nama Lengkap wajib diisi!");
+            return;
+        }
+
+        try {
+            if (con == null || con.isClosed()) initDB();
+
+            String checkSql = "SELECT id_anggota FROM anggota WHERE nomor_induk = ?";
+            try (PreparedStatement pstCheck = con.prepareStatement(checkSql)) {
+                pstCheck.setString(1, nis);
+                ResultSet rs = pstCheck.executeQuery();
+                if (rs.next()) {
+                    JOptionPane.showMessageDialog(this, "Anggota dengan NIS ini sudah terdaftar!");
+                    return;
+                }
+            }
+
+            String dbTipe = tipe.toLowerCase().contains("pegawai") || tipe.toLowerCase().contains("petugas") ? "Petugas" : "Siswa";
+            int roleId = dbTipe.equalsIgnoreCase("Petugas") ? 1 : 2;
+
+            String sqlUser = "INSERT INTO pengguna (username, password, nama_lengkap, no_hp, id_role, is_active) VALUES (?, ?, ?, ?, ?, 1)";
+            PreparedStatement pstUser = con.prepareStatement(sqlUser, Statement.RETURN_GENERATED_KEYS);
+            pstUser.setString(1, nis.toLowerCase());
+            pstUser.setString(2, "123456");
+            pstUser.setString(3, nama);
+            pstUser.setString(4, noHp);
+            pstUser.setInt(5, roleId);
+            pstUser.executeUpdate();
+
+            ResultSet rsKey = pstUser.getGeneratedKeys();
+            int newUserId = 0;
+            if (rsKey.next()) {
+                newUserId = rsKey.getInt(1);
+            }
+
+            String sqlAnggota = "INSERT INTO anggota (id_user, nomor_induk, tipe_anggota, tgl_bergabung) VALUES (?, ?, ?, CURDATE())";
+            try (PreparedStatement pstA = con.prepareStatement(sqlAnggota)) {
+                pstA.setInt(1, newUserId);
+                pstA.setString(2, nis);
+                pstA.setString(3, dbTipe);
+                pstA.executeUpdate();
+            }
+
+            JOptionPane.showMessageDialog(this, "Data anggota berhasil ditambahkan!");
+            resetForm();
+            loadTable();
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal tambah anggota: " + e.getMessage());
+        }
+    }
+
+    private void updateAnggota() {
+        String nis = t_nis.getText().trim();
+        String nama = t_nama.getText().trim();
+        String tipe = jComboBox1.getSelectedItem() != null ? jComboBox1.getSelectedItem().toString() : "Siswa";
+        String noHp = t_nomor.getText().trim();
+
+        if (nis.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Pilih data anggota yang akan diupdate!");
+            return;
+        }
+
+        try {
+            if (con == null || con.isClosed()) initDB();
+            String dbTipe = tipe.toLowerCase().contains("pegawai") || tipe.toLowerCase().contains("petugas") ? "Petugas" : "Siswa";
+
+            String sql = "UPDATE pengguna p JOIN anggota a ON p.id_user = a.id_user "
+                       + "SET p.nama_lengkap = ?, p.no_hp = ?, a.tipe_anggota = ? "
+                       + "WHERE a.nomor_induk = ?";
+            try (PreparedStatement pst = con.prepareStatement(sql)) {
+                pst.setString(1, nama);
+                pst.setString(2, noHp);
+                pst.setString(3, dbTipe);
+                pst.setString(4, nis);
+                int updated = pst.executeUpdate();
+                if (updated > 0) {
+                    JOptionPane.showMessageDialog(this, "Data anggota berhasil diupdate!");
+                    resetForm();
+                    loadTable();
+                } else {
+                    JOptionPane.showMessageDialog(this, "NIS anggota tidak ditemukan!");
+                }
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal update anggota: " + e.getMessage());
+        }
+    }
+
+    private void hapusAnggota() {
+        String nis = t_nis.getText().trim();
+        if (nis.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Pilih data anggota yang akan dihapus!");
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(this, "Yakin ingin menghapus anggota dengan NIS " + nis + "?", "Konfirmasi", JOptionPane.YES_NO_OPTION);
+        if (confirm != JOptionPane.YES_OPTION) return;
+
+        try {
+            if (con == null || con.isClosed()) initDB();
+            String findUser = "SELECT id_user FROM anggota WHERE nomor_induk = ?";
+            int idUser = 0;
+            try (PreparedStatement pstFind = con.prepareStatement(findUser)) {
+                pstFind.setString(1, nis);
+                ResultSet rs = pstFind.executeQuery();
+                if (rs.next()) {
+                    idUser = rs.getInt("id_user");
+                }
+            }
+
+            if (idUser > 0) {
+                String delUser = "DELETE FROM pengguna WHERE id_user = ?";
+                try (PreparedStatement pstDel = con.prepareStatement(delUser)) {
+                    pstDel.setInt(1, idUser);
+                    pstDel.executeUpdate();
+                }
+                JOptionPane.showMessageDialog(this, "Data anggota berhasil dihapus!");
+                resetForm();
+                loadTable();
+            } else {
+                JOptionPane.showMessageDialog(this, "NIS tidak ditemukan!");
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal hapus anggota: " + e.getMessage());
+        }
+    }
+
+    private void cariAnggota() {
+        String keyword = t_nis.getText().trim();
+        if (keyword.isEmpty()) {
+            keyword = t_nama.getText().trim();
+        }
+
+        if (keyword.isEmpty()) {
+            loadTable();
+            return;
+        }
+
+        DefaultTableModel model = new DefaultTableModel(
+            new String[]{"NIS / No Induk", "Nama Lengkap", "Tipe Anggota", "Buku Dipinjam", "No HP"}, 0
+        ) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+
+        try {
+            if (con == null || con.isClosed()) initDB();
+            String sql = "SELECT a.nomor_induk, p.nama_lengkap, a.tipe_anggota, p.no_hp, "
+                       + "(SELECT COUNT(*) FROM peminjaman pm WHERE pm.id_anggota = a.id_anggota AND pm.status_peminjaman = 'Dipinjam') AS pinjam_count "
+                       + "FROM anggota a "
+                       + "JOIN pengguna p ON a.id_user = p.id_user "
+                       + "WHERE a.nomor_induk LIKE ? OR p.nama_lengkap LIKE ? "
+                       + "ORDER BY a.nomor_induk ASC";
+            try (PreparedStatement pst = con.prepareStatement(sql)) {
+                String searchPattern = "%" + keyword + "%";
+                pst.setString(1, searchPattern);
+                pst.setString(2, searchPattern);
+                ResultSet rs = pst.executeQuery();
+                while (rs.next()) {
+                    model.addRow(new Object[]{
+                        rs.getString("nomor_induk"),
+                        rs.getString("nama_lengkap"),
+                        rs.getString("tipe_anggota"),
+                        rs.getInt("pinjam_count"),
+                        rs.getString("no_hp")
+                    });
+                }
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal mencari data: " + e.getMessage());
+        }
+        jTable1.setModel(model);
+    }
+
+    private void resetForm() {
+        t_nis.setText("");
+        t_nama.setText("");
+        t_buku.setText("");
+        t_nomor.setText("");
+        if (jComboBox1.getItemCount() > 0) jComboBox1.setSelectedIndex(0);
+        jTable1.clearSelection();
     }
 
     /**

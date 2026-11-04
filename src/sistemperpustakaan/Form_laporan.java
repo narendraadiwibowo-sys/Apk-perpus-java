@@ -1,5 +1,9 @@
 package sistemperpustakaan;
 
+import java.sql.*;
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+
 /*
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
@@ -12,12 +16,86 @@ package sistemperpustakaan;
 public class Form_laporan extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(Form_laporan.class.getName());
+    private Connection con;
 
     /**
      * Creates new form Form_laporan
      */
     public Form_laporan() {
         initComponents();
+        initDB();
+        initMenuNavigation();
+        loadRekapBulanan();
+    }
+
+    private void initDB() {
+        try {
+            con = Config.configDB();
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Koneksi database gagal: " + e.getMessage());
+        }
+    }
+
+    private void initMenuNavigation() {
+        // Menu Laporan Buku
+        jMenuItem1.addActionListener(e -> {
+            new Laporan_buku().setVisible(true);
+            this.dispose();
+        });
+
+        // Menu Laporan Peminjaman
+        jMenuItem2.addActionListener(e -> {
+            new Form_Laporan_peminjaman().setVisible(true);
+            this.dispose();
+        });
+    }
+
+    private void loadRekapBulanan() {
+        DefaultTableModel model = new DefaultTableModel(
+            new String[]{"Periode (Bulan-Tahun)", "Total Peminjaman", "Selesai / Dikembalikan", "Masih Dipinjam", "Terlambat / Denda"}, 0
+        ) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+
+        try {
+            if (con == null || con.isClosed()) initDB();
+
+            String sql = "SELECT DATE_FORMAT(tgl_pinjam, '%M %Y') AS periode, "
+                       + "COUNT(*) AS total_pinjam, "
+                       + "SUM(CASE WHEN status_peminjaman = 'Selesai' THEN 1 ELSE 0 END) AS selesai, "
+                       + "SUM(CASE WHEN status_peminjaman = 'Dipinjam' THEN 1 ELSE 0 END) AS dipinjam, "
+                       + "SUM(CASE WHEN status_peminjaman = 'Terlambat' THEN 1 ELSE 0 END) AS terlambat "
+                       + "FROM peminjaman "
+                       + "GROUP BY DATE_FORMAT(tgl_pinjam, '%Y-%m'), DATE_FORMAT(tgl_pinjam, '%M %Y') "
+                       + "ORDER BY DATE_FORMAT(tgl_pinjam, '%Y-%m') DESC";
+
+            try (Statement st = con.createStatement(); ResultSet rs = st.executeQuery(sql)) {
+                while (rs.next()) {
+                    model.addRow(new Object[]{
+                        rs.getString("periode"),
+                        rs.getInt("total_pinjam"),
+                        rs.getInt("selesai"),
+                        rs.getInt("dipinjam"),
+                        rs.getInt("terlambat")
+                    });
+                }
+            }
+        } catch (SQLException e) {
+            // Fallback sederhana
+            try {
+                String sqlOld = "SELECT DATE_FORMAT(tgl_pinjam, '%M %Y') AS periode, COUNT(*) AS total FROM peminjaman GROUP BY periode";
+                try (Statement st = con.createStatement(); ResultSet rs = st.executeQuery(sqlOld)) {
+                    while (rs.next()) {
+                        model.addRow(new Object[]{
+                            rs.getString("periode"),
+                            rs.getInt("total"),
+                            0, 0, 0
+                        });
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+        jTable1.setModel(model);
     }
 
     /**

@@ -1,5 +1,9 @@
 package sistemperpustakaan;
 
+import java.sql.*;
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+
 /*
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
@@ -12,12 +16,187 @@ package sistemperpustakaan;
 public class Form_Pencarian_Buku extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(Form_Pencarian_Buku.class.getName());
+    private Connection con;
 
     /**
      * Creates new form Form_Pencarian_Buku
      */
     public Form_Pencarian_Buku() {
         initComponents();
+        initDB();
+        initCustomListeners();
+        loadAllBooks();
+    }
+
+    private void initDB() {
+        try {
+            con = Config.configDB();
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Koneksi database gagal: " + e.getMessage());
+        }
+    }
+
+    private void initCustomListeners() {
+        b_cari.addActionListener(e -> cariBuku());
+
+        // Tekan enter di salah satu textfield langsung eksekusi pencarian
+        t_judul.addActionListener(e -> cariBuku());
+        t_pengarang.addActionListener(e -> cariBuku());
+        t_penerbit.addActionListener(e -> cariBuku());
+        t_tahun.addActionListener(e -> cariBuku());
+        t_kategori.addActionListener(e -> cariBuku());
+
+        jTable1.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting() && jTable1.getSelectedRow() >= 0) {
+                int r = jTable1.getSelectedRow();
+                t_judul.setText(jTable1.getValueAt(r, 0) != null ? jTable1.getValueAt(r, 0).toString() : "");
+                t_pengarang.setText(jTable1.getValueAt(r, 1) != null ? jTable1.getValueAt(r, 1).toString() : "");
+                t_penerbit.setText(jTable1.getValueAt(r, 2) != null ? jTable1.getValueAt(r, 2).toString() : "");
+                t_tahun.setText(jTable1.getValueAt(r, 3) != null ? jTable1.getValueAt(r, 3).toString() : "");
+                t_kategori.setText(jTable1.getValueAt(r, 4) != null ? jTable1.getValueAt(r, 4).toString() : "");
+            }
+        });
+    }
+
+    private void loadAllBooks() {
+        DefaultTableModel model = new DefaultTableModel(
+            new String[]{"Judul Buku", "Pengarang / Penulis", "Penerbit", "Tahun Terbit", "Kategori", "Stok Tersedia"}, 0
+        ) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+
+        try {
+            if (con == null || con.isClosed()) initDB();
+
+            // Coba query dari skema relasional terlebih dahulu
+            String sql = "SELECT b.judul, "
+                       + "IFNULL(GROUP_CONCAT(pn.nama_penulis SEPARATOR ', '), '-') AS penulis, "
+                       + "IFNULL(pb.nama_penerbit, '-') AS penerbit, "
+                       + "IFNULL(b.tahun_terbit, '-') AS tahun, "
+                       + "IFNULL(k.nama_kategori, '-') AS kategori, "
+                       + "b.stok_tersedia "
+                       + "FROM buku b "
+                       + "LEFT JOIN buku_penulis bp ON b.id_buku = bp.id_buku "
+                       + "LEFT JOIN penulis pn ON bp.id_penulis = pn.id_penulis "
+                       + "LEFT JOIN penerbit pb ON b.id_penerbit = pb.id_penerbit "
+                       + "LEFT JOIN kategori k ON b.id_kategori = k.id_kategori "
+                       + "GROUP BY b.id_buku ORDER BY b.judul ASC";
+
+            try (Statement st = con.createStatement(); ResultSet rs = st.executeQuery(sql)) {
+                while (rs.next()) {
+                    model.addRow(new Object[]{
+                        rs.getString("judul"),
+                        rs.getString("penulis"),
+                        rs.getString("penerbit"),
+                        rs.getString("tahun"),
+                        rs.getString("kategori"),
+                        rs.getInt("stok_tersedia")
+                    });
+                }
+            }
+        } catch (SQLException e) {
+            // Fallback ke tabel buku sederhana jika skema relasional belum diisi
+            try {
+                String sqlOld = "SELECT judul, pengarang, penerbit, '-' AS tahun, kategori, stok FROM buku";
+                try (Statement st = con.createStatement(); ResultSet rs = st.executeQuery(sqlOld)) {
+                    while (rs.next()) {
+                        model.addRow(new Object[]{
+                            rs.getString("judul"),
+                            rs.getString("pengarang"),
+                            rs.getString("penerbit"),
+                            "-",
+                            rs.getString("kategori"),
+                            rs.getInt("stok")
+                        });
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+        jTable1.setModel(model);
+    }
+
+    private void cariBuku() {
+        String judul = t_judul.getText().trim();
+        String pengarang = t_pengarang.getText().trim();
+        String penerbit = t_penerbit.getText().trim();
+        String tahun = t_tahun.getText().trim();
+        String kategori = t_kategori.getText().trim();
+
+        if (judul.isEmpty() && pengarang.isEmpty() && penerbit.isEmpty() && tahun.isEmpty() && kategori.isEmpty()) {
+            loadAllBooks();
+            return;
+        }
+
+        DefaultTableModel model = new DefaultTableModel(
+            new String[]{"Judul Buku", "Pengarang / Penulis", "Penerbit", "Tahun Terbit", "Kategori", "Stok Tersedia"}, 0
+        ) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+
+        try {
+            if (con == null || con.isClosed()) initDB();
+
+            // Query pencarian dengan filter dinamis
+            StringBuilder sql = new StringBuilder(
+                "SELECT b.judul, "
+              + "IFNULL(GROUP_CONCAT(pn.nama_penulis SEPARATOR ', '), '-') AS penulis, "
+              + "IFNULL(pb.nama_penerbit, '-') AS penerbit, "
+              + "IFNULL(b.tahun_terbit, '-') AS tahun, "
+              + "IFNULL(k.nama_kategori, '-') AS kategori, "
+              + "b.stok_tersedia "
+              + "FROM buku b "
+              + "LEFT JOIN buku_penulis bp ON b.id_buku = bp.id_buku "
+              + "LEFT JOIN penulis pn ON bp.id_penulis = pn.id_penulis "
+              + "LEFT JOIN penerbit pb ON b.id_penerbit = pb.id_penerbit "
+              + "LEFT JOIN kategori k ON b.id_kategori = k.id_kategori "
+              + "WHERE 1=1 "
+            );
+
+            if (!judul.isEmpty()) sql.append("AND b.judul LIKE '%").append(judul).append("%' ");
+            if (!penerbit.isEmpty()) sql.append("AND pb.nama_penerbit LIKE '%").append(penerbit).append("%' ");
+            if (!tahun.isEmpty()) sql.append("AND CAST(b.tahun_terbit AS CHAR) LIKE '%").append(tahun).append("%' ");
+            if (!kategori.isEmpty()) sql.append("AND k.nama_kategori LIKE '%").append(kategori).append("%' ");
+
+            sql.append("GROUP BY b.id_buku ");
+            if (!pengarang.isEmpty()) {
+                sql.append("HAVING penulis LIKE '%").append(pengarang).append("%' ");
+            }
+            sql.append("ORDER BY b.judul ASC");
+
+            try (Statement st = con.createStatement(); ResultSet rs = st.executeQuery(sql.toString())) {
+                while (rs.next()) {
+                    model.addRow(new Object[]{
+                        rs.getString("judul"),
+                        rs.getString("penulis"),
+                        rs.getString("penerbit"),
+                        rs.getString("tahun"),
+                        rs.getString("kategori"),
+                        rs.getInt("stok_tersedia")
+                    });
+                }
+            }
+        } catch (SQLException e) {
+            // Fallback ke pencarian buku tabel flat
+            try {
+                String sqlOld = "SELECT judul, pengarang, penerbit, '-' AS tahun, kategori, stok FROM buku WHERE judul LIKE ? OR pengarang LIKE ?";
+                try (PreparedStatement pst = con.prepareStatement(sqlOld)) {
+                    pst.setString(1, "%" + judul + "%");
+                    pst.setString(2, "%" + pengarang + "%");
+                    ResultSet rs = pst.executeQuery();
+                    while (rs.next()) {
+                        model.addRow(new Object[]{
+                            rs.getString("judul"),
+                            rs.getString("pengarang"),
+                            rs.getString("penerbit"),
+                            "-",
+                            rs.getString("kategori"),
+                            rs.getInt("stok")
+                        });
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+        jTable1.setModel(model);
     }
 
     /**

@@ -1,5 +1,9 @@
 package sistemperpustakaan;
 
+import java.sql.*;
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+
 /*
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
@@ -12,12 +16,82 @@ package sistemperpustakaan;
 public class Form_Laporan_peminjaman extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(Form_Laporan_peminjaman.class.getName());
+    private Connection con;
 
     /**
      * Creates new form Form_Laporan_peminjaman
      */
     public Form_Laporan_peminjaman() {
         initComponents();
+        initDB();
+        loadDataLaporan();
+    }
+
+    private void initDB() {
+        try {
+            con = Config.configDB();
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Koneksi database gagal: " + e.getMessage());
+        }
+    }
+
+    private void loadDataLaporan() {
+        DefaultTableModel model = new DefaultTableModel(
+            new String[]{"No Peminjaman", "NIS / ID", "Nama Peminjam", "Judul Buku", "Tgl Pinjam", "Tenggat / Kembali", "Status"}, 0
+        ) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+
+        try {
+            if (con == null || con.isClosed()) initDB();
+
+            // Query laporan peminjaman lengkap
+            String sql = "SELECT p.kode_transaksi, a.nomor_induk, pg.nama_lengkap, "
+                       + "IFNULL(b.judul, '-') AS judul_buku, "
+                       + "DATE_FORMAT(p.tgl_pinjam, '%d-%m-%Y') AS tgl_pinjam_fmt, "
+                       + "DATE_FORMAT(p.tgl_tenggat, '%d-%m-%Y') AS tgl_tenggat_fmt, "
+                       + "p.status_peminjaman "
+                       + "FROM peminjaman p "
+                       + "JOIN anggota a ON p.id_anggota = a.id_anggota "
+                       + "JOIN pengguna pg ON a.id_user = pg.id_user "
+                       + "LEFT JOIN detail_peminjaman dp ON p.id_peminjaman = dp.id_peminjaman "
+                       + "LEFT JOIN item_buku ib ON dp.id_item = ib.id_item "
+                       + "LEFT JOIN buku b ON ib.id_buku = b.id_buku "
+                       + "ORDER BY p.tgl_pinjam DESC";
+
+            try (Statement st = con.createStatement(); ResultSet rs = st.executeQuery(sql)) {
+                while (rs.next()) {
+                    model.addRow(new Object[]{
+                        rs.getString("kode_transaksi"),
+                        rs.getString("nomor_induk"),
+                        rs.getString("nama_lengkap"),
+                        rs.getString("judul_buku"),
+                        rs.getString("tgl_pinjam_fmt"),
+                        rs.getString("tgl_tenggat_fmt"),
+                        rs.getString("status_peminjaman")
+                    });
+                }
+            }
+        } catch (SQLException e) {
+            // Fallback ke tabel flat peminjaman
+            try {
+                String sqlOld = "SELECT id_pinjam, id_anggota, nama_peminjam, judul_buku, tgl_pinjam, tgl_kembali, status FROM peminjaman";
+                try (Statement st = con.createStatement(); ResultSet rs = st.executeQuery(sqlOld)) {
+                    while (rs.next()) {
+                        model.addRow(new Object[]{
+                            rs.getString("id_pinjam"),
+                            rs.getString("id_anggota"),
+                            rs.getString("nama_peminjam"),
+                            rs.getString("judul_buku"),
+                            rs.getString("tgl_pinjam"),
+                            rs.getString("tgl_kembali"),
+                            rs.getString("status")
+                        });
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+        jTable1.setModel(model);
     }
 
     /**

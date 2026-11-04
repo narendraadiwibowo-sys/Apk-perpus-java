@@ -5,6 +5,11 @@ package sistemperpustakaan;
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
 
+import java.sql.*;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import javax.swing.*;
+
 /**
  *
  * @author PC-1B LKS-2026
@@ -13,11 +18,209 @@ public class Form_peminjaman extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(Form_peminjaman.class.getName());
 
+    // Koneksi database
+    private Connection con;
+    // Format tanggal yang dipakai di form
+    private static final String DATE_FORMAT = "dd/MM/yyyy";
+
     /**
      * Creates new form Form_peminjaman
      */
     public Form_peminjaman() {
         initComponents();
+        initDB();
+        setDefaultTanggal();
+        setupAutoFill();
+        setupButtonPinjam();
+        setupButtonBatal();
+    }
+
+    // ===================== INISIALISASI DB =====================
+    private void initDB() {
+        try {
+            con = Config.configDB();
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Koneksi database gagal: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // ===================== Set tanggal hari ini & default kembali =====================
+    private void setDefaultTanggal() {
+        SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT);
+        String today = sdf.format(new Date());
+        // Tanggal pinjam = hari ini
+        jTextField6.setText(today);
+        // Tanggal kembali = 7 hari ke depan
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        cal.add(java.util.Calendar.DAY_OF_MONTH, 7);
+        jTextField5.setText(sdf.format(cal.getTime()));
+    }
+
+    // ===================== Auto-fill nama anggota saat ID diisi =====================
+    private void setupAutoFill() {
+        // Listener untuk jTextField1 (ID Anggota) → cari nama otomatis
+        jTextField1.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusLost(java.awt.event.FocusEvent e) {
+                autoFillNama(jTextField1.getText().trim());
+            }
+        });
+        // Listener untuk jTextField4 (Kode Buku) → cari judul otomatis
+        jTextField4.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusLost(java.awt.event.FocusEvent e) {
+                autoFillJudul(jTextField4.getText().trim());
+            }
+        });
+    }
+
+    // ===================== Auto-fill nama anggota =====================
+    private void autoFillNama(String idAnggota) {
+        if (idAnggota.isEmpty()) return;
+        try {
+            if (con == null || con.isClosed()) initDB();
+            String sql = "SELECT nama FROM anggota WHERE id_anggota = ?";
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setString(1, idAnggota);
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) {
+                    jTextField2.setText(rs.getString("nama"));
+                } else {
+                    jTextField2.setText("");
+                    JOptionPane.showMessageDialog(this, "ID Anggota tidak ditemukan!", "Info", JOptionPane.WARNING_MESSAGE);
+                }
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // ===================== Auto-fill judul buku =====================
+    private void autoFillJudul(String kodeBuku) {
+        if (kodeBuku.isEmpty()) return;
+        try {
+            if (con == null || con.isClosed()) initDB();
+            String sql = "SELECT judul, stok FROM buku WHERE kode_buku = ?";
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setString(1, kodeBuku);
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) {
+                    int stok = rs.getInt("stok");
+                    if (stok <= 0) {
+                        jTextField3.setText("");
+                        JOptionPane.showMessageDialog(this, "Stok buku habis!", "Info", JOptionPane.WARNING_MESSAGE);
+                    } else {
+                        jTextField3.setText(rs.getString("judul"));
+                    }
+                } else {
+                    jTextField3.setText("");
+                    JOptionPane.showMessageDialog(this, "Kode Buku tidak ditemukan!", "Info", JOptionPane.WARNING_MESSAGE);
+                }
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // ===================== Setup tombol Pinjam Buku =====================
+    private void setupButtonPinjam() {
+        jButton1.addActionListener(e -> pinjamBuku());
+    }
+
+    // ===================== Setup tombol Batal =====================
+    private void setupButtonBatal() {
+        jButton2.addActionListener(e -> {
+            int konfirmasi = JOptionPane.showConfirmDialog(this, "Batalkan dan tutup form?", "Konfirmasi", JOptionPane.YES_NO_OPTION);
+            if (konfirmasi == JOptionPane.YES_OPTION) {
+                resetForm();
+            }
+        });
+    }
+
+    // ===================== CREATE - Pinjam Buku =====================
+    private void pinjamBuku() {
+        String idAnggota = jTextField1.getText().trim();
+        String namaPeminjam = jTextField2.getText().trim();
+        String kodeBuku = jTextField4.getText().trim();
+        String judulBuku = jTextField3.getText().trim();
+        String tglPinjamStr = jTextField6.getText().trim();
+        String tglKembaliStr = jTextField5.getText().trim();
+
+        // Validasi input
+        if (idAnggota.isEmpty() || kodeBuku.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "ID Anggota dan Kode Buku wajib diisi!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (judulBuku.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Kode Buku tidak valid atau stok habis!", "Peringatan", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Parse tanggal
+        java.sql.Date tglPinjam, tglKembali;
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT);
+            tglPinjam   = new java.sql.Date(sdf.parse(tglPinjamStr).getTime());
+            tglKembali  = new java.sql.Date(sdf.parse(tglKembaliStr).getTime());
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Format tanggal salah! Gunakan dd/MM/yyyy", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try {
+            if (con == null || con.isClosed()) initDB();
+            con.setAutoCommit(false);
+
+            // 1. Cek apakah anggota sudah pinjam buku yang sama dan belum dikembalikan
+            String cekPinjam = "SELECT id_pinjam FROM peminjaman WHERE id_anggota=? AND kode_buku=? AND status='dipinjam'";
+            try (PreparedStatement ps = con.prepareStatement(cekPinjam)) {
+                ps.setString(1, idAnggota);
+                ps.setString(2, kodeBuku);
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) {
+                    JOptionPane.showMessageDialog(this, "Anggota masih meminjam buku ini!", "Info", JOptionPane.WARNING_MESSAGE);
+                    con.setAutoCommit(true);
+                    return;
+                }
+            }
+
+            // 2. Insert peminjaman
+            String sqlInsert = "INSERT INTO peminjaman (id_anggota, nama_peminjam, kode_buku, judul_buku, tgl_pinjam, tgl_kembali, status) VALUES (?,?,?,?,?,?,'dipinjam')";
+            try (PreparedStatement ps = con.prepareStatement(sqlInsert)) {
+                ps.setString(1, idAnggota);
+                ps.setString(2, namaPeminjam);
+                ps.setString(3, kodeBuku);
+                ps.setString(4, judulBuku);
+                ps.setDate(5, tglPinjam);
+                ps.setDate(6, tglKembali);
+                ps.executeUpdate();
+            }
+
+            // 3. Kurangi stok buku
+            String sqlStok = "UPDATE buku SET stok = stok - 1 WHERE kode_buku = ? AND stok > 0";
+            try (PreparedStatement ps = con.prepareStatement(sqlStok)) {
+                ps.setString(1, kodeBuku);
+                ps.executeUpdate();
+            }
+
+            con.commit();
+            con.setAutoCommit(true);
+            JOptionPane.showMessageDialog(this, "Peminjaman berhasil disimpan!", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+            resetForm();
+
+        } catch (SQLException e) {
+            try { con.rollback(); con.setAutoCommit(true); } catch (SQLException ex) { /* ignore */ }
+            JOptionPane.showMessageDialog(this, "Gagal menyimpan peminjaman: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // ===================== RESET form =====================
+    private void resetForm() {
+        jTextField1.setText("");
+        jTextField2.setText("");
+        jTextField3.setText("");
+        jTextField4.setText("");
+        setDefaultTanggal();
     }
 
     /**
@@ -205,11 +408,13 @@ public class Form_peminjaman extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jTextField4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField4ActionPerformed
-        // TODO add your handling code here:
+        // Enter di kode buku → auto-fill judul
+        autoFillJudul(jTextField4.getText().trim());
     }//GEN-LAST:event_jTextField4ActionPerformed
 
     private void jTextField1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField1ActionPerformed
-        // TODO add your handling code here:
+        // Enter di ID anggota → auto-fill nama
+        autoFillNama(jTextField1.getText().trim());
     }//GEN-LAST:event_jTextField1ActionPerformed
 
     /**
