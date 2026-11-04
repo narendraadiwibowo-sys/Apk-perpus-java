@@ -18,30 +18,9 @@ public class Registrasi extends javax.swing.JFrame {
     /**
      * Creates new form Registrasi
      */
-    private java.awt.Image bgOriginal;
-
     public Registrasi() {
         initComponents();
         panel_tembus.setBackground(new java.awt.Color(0, 0, 0, 150));
-        // Load gambar asli untuk resize
-        bgOriginal = new javax.swing.ImageIcon(getClass().getResource("/images/Form Registrasi.jpg")).getImage();
-        // Listener resize saat maximize
-        addComponentListener(new java.awt.event.ComponentAdapter() {
-            @Override
-            public void componentResized(java.awt.event.ComponentEvent evt) {
-                resizeBackground();
-            }
-        });
-    }
-
-    private void resizeBackground() {
-        int w = getContentPane().getWidth();
-        int h = getContentPane().getHeight();
-        if (bgOriginal != null && w > 0 && h > 0) {
-            jLabel3.setIcon(new javax.swing.ImageIcon(
-                bgOriginal.getScaledInstance(w, h, java.awt.Image.SCALE_SMOOTH)));
-            jLabel3.setBounds(0, 0, w, h);
-        }
     }
 
     /**
@@ -60,10 +39,16 @@ public class Registrasi extends javax.swing.JFrame {
         jLabel1 = new javax.swing.JLabel();
         jLabel2 = new javax.swing.JLabel();
         txt_pass = new javax.swing.JTextField();
+        jLabel4 = new javax.swing.JLabel();
+        jLabel5 = new javax.swing.JLabel();
+        jLabel6 = new javax.swing.JLabel();
+        txt_pass1 = new javax.swing.JTextField();
+        txt_pass2 = new javax.swing.JTextField();
+        jComboBox1 = new javax.swing.JComboBox<>();
         jLabel3 = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-        setResizable(true);
+        setResizable(false);
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
         btn_batal.setBackground(new java.awt.Color(0, 255, 255));
@@ -79,45 +64,81 @@ public class Registrasi extends javax.swing.JFrame {
         getContentPane().add(btn_buat, new org.netbeans.lib.awtextra.AbsoluteConstraints(160, 310, 120, 30));
 
         jLabel1.setFont(new java.awt.Font("SansSerif", 1, 18)); // NOI18N
-        jLabel1.setForeground(new java.awt.Color(255, 0, 255));
-        jLabel1.setText("Username");
+        jLabel1.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel1.setText("NIS");
 
         jLabel2.setFont(new java.awt.Font("SansSerif", 1, 18)); // NOI18N
-        jLabel2.setForeground(new java.awt.Color(255, 0, 255));
+        jLabel2.setForeground(new java.awt.Color(255, 255, 255));
         jLabel2.setText("Password");
 
         txt_pass.addActionListener(this::txt_passActionPerformed);
+
+        jLabel4.setFont(new java.awt.Font("SansSerif", 1, 18)); // NOI18N
+        jLabel4.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel4.setText("USERNAME");
+
+        jLabel5.setFont(new java.awt.Font("SansSerif", 1, 18)); // NOI18N
+        jLabel5.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel5.setText("KEANGGOTAAN");
+
+        jLabel6.setFont(new java.awt.Font("SansSerif", 1, 18)); // NOI18N
+        jLabel6.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel6.setText("NO HP");
+
+        txt_pass1.addActionListener(this::txt_pass1ActionPerformed);
+
+        txt_pass2.addActionListener(this::txt_pass2ActionPerformed);
+
+        jComboBox1.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Petugas", "Siswa" }));
 
         javax.swing.GroupLayout panel_tembusLayout = new javax.swing.GroupLayout(panel_tembus);
         panel_tembus.setLayout(panel_tembusLayout);
         panel_tembusLayout.setHorizontalGroup(
             panel_tembusLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(panel_tembusLayout.createSequentialGroup()
-                .addGap(20, 20, 20)
+                .addGap(11, 11, 11)
                 .addGroup(panel_tembusLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jLabel1, javax.swing.GroupLayout.DEFAULT_SIZE, 116, Short.MAX_VALUE)
-                    .addComponent(jLabel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addGap(34, 34, 34)
-                .addGroup(panel_tembusLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(txt_user, javax.swing.GroupLayout.DEFAULT_SIZE, 226, Short.MAX_VALUE)
-                    .addComponent(txt_pass))
-                .addContainerGap(14, Short.MAX_VALUE))
+                    .addComponent(jLabel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jLabel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jLabel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jLabel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jLabel6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 34, Short.MAX_VALUE)
+                .addGroup(panel_tembusLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(txt_pass, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 226, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(txt_pass2, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 226, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(txt_pass1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 226, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(txt_user, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 226, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, 83, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addContainerGap())
         );
         panel_tembusLayout.setVerticalGroup(
             panel_tembusLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(panel_tembusLayout.createSequentialGroup()
-                .addGap(24, 24, 24)
+                .addContainerGap()
                 .addGroup(panel_tembusLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(txt_user, javax.swing.GroupLayout.PREFERRED_SIZE, 31, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 41, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 42, Short.MAX_VALUE)
+                    .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 41, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(txt_user, javax.swing.GroupLayout.PREFERRED_SIZE, 31, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(panel_tembusLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel4, javax.swing.GroupLayout.PREFERRED_SIZE, 41, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(txt_pass1, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(panel_tembusLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel5, javax.swing.GroupLayout.PREFERRED_SIZE, 41, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jComboBox1))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(panel_tembusLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel6, javax.swing.GroupLayout.PREFERRED_SIZE, 41, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(txt_pass2, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGroup(panel_tembusLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 41, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(txt_pass, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(22, 22, 22))
+                .addGap(25, 25, 25))
         );
 
-        getContentPane().add(panel_tembus, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 60, 410, 170));
+        getContentPane().add(panel_tembus, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 20, 420, 260));
 
         jLabel3.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/Form Registrasi.jpg"))); // NOI18N
         jLabel3.setText("jLabel3");
@@ -132,42 +153,85 @@ public class Registrasi extends javax.swing.JFrame {
     }//GEN-LAST:event_btn_batalActionPerformed
 
     private void btn_buatActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_buatActionPerformed
-        JOptionPane.showMessageDialog(null, "Akun berhasil dibuat, Silahkan Login");
+        String nis = txt_user.getText().trim();
+        String username = txt_pass1.getText().trim();
+        String keanggotaan = jComboBox1.getSelectedItem() != null ? jComboBox1.getSelectedItem().toString() : "Siswa";
+        String noHp = txt_pass2.getText().trim();
+        String password = txt_pass.getText().trim();
+
+        if (nis.isEmpty() || username.isEmpty() || password.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "NIS, Username, dan Password wajib diisi!");
+            return;
+        }
+
+        try {
+            Connection con = Config.configDB();
+            if (con == null) {
+                JOptionPane.showMessageDialog(this, "Koneksi ke database gagal!");
+                return;
+            }
+
+            // Cek apakah username sudah digunakan di tabel pengguna
+            String checkUserSql = "SELECT id_user FROM pengguna WHERE username = ?";
+            PreparedStatement checkUserPst = con.prepareStatement(checkUserSql);
+            checkUserPst.setString(1, username);
+            ResultSet rsUser = checkUserPst.executeQuery();
+            if (rsUser.next()) {
+                JOptionPane.showMessageDialog(this, "Username sudah digunakan, silakan pilih username lain!");
+                return;
+            }
+
+            // Tentukan role_id berdasarkan pilihan keanggotaan (1 = Petugas, 2 = Siswa)
+            int roleId = "Petugas".equalsIgnoreCase(keanggotaan) ? 1 : 2;
+
+            // Simpan ke tabel pengguna
+            String insertUserSql = "INSERT INTO pengguna (username, password, nama_lengkap, no_hp, id_role, is_active) "
+                                 + "VALUES (?, ?, ?, ?, ?, 1)";
+            PreparedStatement pstUser = con.prepareStatement(insertUserSql, Statement.RETURN_GENERATED_KEYS);
+            pstUser.setString(1, username);
+            pstUser.setString(2, password);
+            pstUser.setString(3, username); // nama_lengkap default diisi username
+            pstUser.setString(4, noHp);
+            pstUser.setInt(5, roleId);
+            pstUser.executeUpdate();
+
+            ResultSet rsKeys = pstUser.getGeneratedKeys();
+            int newUserId = 0;
+            if (rsKeys.next()) {
+                newUserId = rsKeys.getInt(1);
+            }
+
+            // Simpan ke tabel anggota yang berelasi dengan tabel pengguna (FK: id_user)
+            String insertAnggotaSql = "INSERT INTO anggota (id_user, nomor_induk, tipe_anggota, tgl_bergabung) "
+                                    + "VALUES (?, ?, ?, CURDATE())";
+            PreparedStatement pstAnggota = con.prepareStatement(insertAnggotaSql);
+            pstAnggota.setInt(1, newUserId);
+            pstAnggota.setString(2, nis);
+            pstAnggota.setString(3, keanggotaan);
+            pstAnggota.executeUpdate();
+
+            JOptionPane.showMessageDialog(this, "Akun berhasil dibuat sebagai " + keanggotaan + "! Silakan Login.");
+            
+            // Pindah ke FormLogin
+            dispose();
+            new FormLogin().setVisible(true);
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal membuat akun: " + e.getMessage());
+        }
     }//GEN-LAST:event_btn_buatActionPerformed
 
     private void txt_passActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txt_passActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_txt_passActionPerformed
 
-    // Fungsi yang bisa dipanggil untuk memproses registrasi
-    // Panggil fungsi ini di event handler tombol registrasi Anda nantinya
-    public void prosesRegistrasi(String username, String password) {
-        try {
-            Connection con = Config.configDB();
-            Statement stat = con.createStatement();
-            
-            // Cek apakah sudah ada admin (level = 1)
-            String checkAdminSql = "SELECT count(*) as total FROM login WHERE level = '1'";
-            ResultSet rs = stat.executeQuery(checkAdminSql);
-            
-            String level = "2"; // Default adalah user biasa
-            if (rs.next()) {
-                if (rs.getInt("total") == 0) {
-                    // Jika belum ada admin sama sekali, akun pertama yang dibuat akan menjadi admin
-                    level = "1";
-                }
-            }
-            
-            String insertSql = "INSERT INTO login (username, password, level) VALUES ('" + username + "', '" + password + "', '" + level + "')";
-            stat.executeUpdate(insertSql);
-            
-            String roleName = level.equals("1") ? "Admin" : "Pengguna Biasa";
-            JOptionPane.showMessageDialog(null, "Registrasi Berhasil! Anda didaftarkan sebagai: " + roleName);
-            
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Gagal Registrasi: " + e.getMessage());
-        }
-    }
+    private void txt_pass1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txt_pass1ActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_txt_pass1ActionPerformed
+
+    private void txt_pass2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txt_pass2ActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_txt_pass2ActionPerformed
 
 
     /**
@@ -198,11 +262,17 @@ public class Registrasi extends javax.swing.JFrame {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btn_batal;
     private javax.swing.JButton btn_buat;
+    private javax.swing.JComboBox<String> jComboBox1;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
+    private javax.swing.JLabel jLabel4;
+    private javax.swing.JLabel jLabel5;
+    private javax.swing.JLabel jLabel6;
     private javax.swing.JPanel panel_tembus;
     private javax.swing.JTextField txt_pass;
+    private javax.swing.JTextField txt_pass1;
+    private javax.swing.JTextField txt_pass2;
     private javax.swing.JTextField txt_user;
     // End of variables declaration//GEN-END:variables
 }

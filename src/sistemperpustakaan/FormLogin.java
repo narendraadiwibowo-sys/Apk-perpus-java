@@ -22,8 +22,6 @@ public class FormLogin extends javax.swing.JFrame {
     String sql;
     
     
-    private java.awt.Image bgOriginal;
-
     public FormLogin() {
         initComponents();
         
@@ -32,27 +30,6 @@ public class FormLogin extends javax.swing.JFrame {
             stat = con.createStatement();
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, e.getMessage());
-        }
-
-        // Load gambar asli untuk resize
-        bgOriginal = new javax.swing.ImageIcon(getClass().getResource("/images/Form Login.jpg")).getImage();
-        // Listener resize saat maximize
-        addComponentListener(new java.awt.event.ComponentAdapter() {
-            @Override
-            public void componentResized(java.awt.event.ComponentEvent evt) {
-                resizeBackground();
-            }
-        });
-    }
-
-    private void resizeBackground() {
-        int w = getContentPane().getWidth();
-        int h = getContentPane().getHeight();
-        if (bgOriginal != null && w > 0 && h > 0) {
-            Images.setIcon(new javax.swing.ImageIcon(
-                bgOriginal.getScaledInstance(w, h, java.awt.Image.SCALE_SMOOTH)));
-            jPanel1.setBounds(0, 0, w, h);
-            Images.setBounds(0, 0, w, h);
         }
     }
 
@@ -77,7 +54,7 @@ public class FormLogin extends javax.swing.JFrame {
         Images = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-        setResizable(true);
+        setResizable(false);
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
         Judul.setBackground(new java.awt.Color(0, 0, 255));
@@ -160,29 +137,46 @@ public class FormLogin extends javax.swing.JFrame {
     }//GEN-LAST:event_txt_usernameActionPerformed
 
     private void Btn_LoginActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Btn_LoginActionPerformed
+        String username = txt_username.getText().trim();
+        String password = txt_password.getText().trim();
+
+        if (username.isEmpty() || password.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Username dan password tidak boleh kosong!");
+            return;
+        }
+
         try {
-            sql = "SELECT * FROM login WHERE username='" + txt_username.getText() +
-                    "' AND password='" + txt_password.getText()
-                    + "'";
-            rs = stat.executeQuery(sql);
+            if (con == null || con.isClosed()) {
+                con = Config.configDB();
+            }
+
+            // Cek pada tabel pengguna yang berelasi dengan tabel role
+            String query = "SELECT p.*, r.nama_role FROM pengguna p "
+                         + "LEFT JOIN role r ON p.id_role = r.id_role "
+                         + "WHERE p.username = ? AND p.password = ?";
+            PreparedStatement pst = con.prepareStatement(query);
+            pst.setString(1, username);
+            pst.setString(2, password);
+            rs = pst.executeQuery();
 
             if (rs.next()) {
-                JOptionPane.showMessageDialog(null, "BERHASIL LOGIN");
-                String level = rs.getString("level");
-                if ("1".equals(level)) {
+                int roleId = rs.getInt("id_role");
+                String roleName = rs.getString("nama_role");
+                
+                JOptionPane.showMessageDialog(this, "Login Berhasil sebagai " + (roleName != null ? roleName : (roleId == 1 ? "Petugas" : "Siswa")));
+                
+                if (roleId == 1) { // 1 = Petugas / Admin
                     new Dashboard_Admin().setVisible(true);
-                } else {
+                } else { // 2 = Siswa / User
                     new Dashboard_user().setVisible(true);
                 }
-                this.dispose(); // Close login form
+                this.dispose();
             } else {
-                JOptionPane.showMessageDialog(null, "username atau password salah");
-                txt_username.setText(null);
-                txt_password.setText(null);
+                JOptionPane.showMessageDialog(this, "Username atau Password salah!");
+                txt_password.setText("");
             }
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, e.getMessage());
-
+            JOptionPane.showMessageDialog(this, "Error saat login: " + e.getMessage());
         }
     }//GEN-LAST:event_Btn_LoginActionPerformed
 
