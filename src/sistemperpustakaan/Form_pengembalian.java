@@ -24,6 +24,7 @@ public class Form_pengembalian extends javax.swing.JFrame {
      */
     public Form_pengembalian() {
         initComponents();
+        initKembaliButton();
         initDB();
         initCustomListeners();
     }
@@ -359,4 +360,25 @@ public class Form_pengembalian extends javax.swing.JFrame {
     private javax.swing.JTextField t_nis;
     private javax.swing.JTextField t_nomor;
     // End of variables declaration//GEN-END:variables
+
+    private void initKembaliButton() {
+        javax.swing.JButton btnKembaliNavigasi = new javax.swing.JButton("← Kembali");
+        btnKembaliNavigasi.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 12));
+        btnKembaliNavigasi.setBackground(new java.awt.Color(220, 53, 69));
+        btnKembaliNavigasi.setForeground(java.awt.Color.WHITE);
+        btnKembaliNavigasi.setFocusPainted(false);
+        btnKembaliNavigasi.addActionListener(e -> {
+            if (SessionManager.loggedRoleId == 2) {
+                new Dashboard_user().setVisible(true);
+            } else {
+                new Dashboard_Admin().setVisible(true);
+            }
+            this.dispose();
+        });
+        try {
+            jPanel1.add(btnKembaliNavigasi, 0);
+        } catch (Exception ex) {
+            getContentPane().add(btnKembaliNavigasi);
+        }
+    }
 }

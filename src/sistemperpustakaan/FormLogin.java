@@ -164,9 +164,13 @@ public class FormLogin extends javax.swing.JFrame {
             if (rs.next()) {
                 int roleId = rs.getInt("id_role");
                 String roleName = rs.getString("nama_role");
-                
-                JOptionPane.showMessageDialog(this, "Login Berhasil sebagai " + (roleName != null ? roleName : (roleId == 1 ? "Petugas" : "Siswa")));
-                
+                int userId = rs.getInt("id_user");
+                String namaLengkap = rs.getString("nama_lengkap");
+                if (namaLengkap == null || namaLengkap.trim().isEmpty()) {
+                    namaLengkap = username;
+                }
+                SessionManager.setSession(userId, username, namaLengkap, (roleName != null ? roleName : (roleId == 1 ? "Petugas" : "Siswa")), roleId);
+                JOptionPane.showMessageDialog(this, "Login Berhasil sebagai " + SessionManager.loggedRole + " (" + SessionManager.loggedNamaLengkap + ")");
                 if (roleId == 1) { // 1 = Petugas / Admin
                     new Dashboard_Admin().setVisible(true);
                 } else { // 2 = Siswa / User

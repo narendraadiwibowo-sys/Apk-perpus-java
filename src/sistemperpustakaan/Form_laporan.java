@@ -25,7 +25,102 @@ public class Form_laporan extends javax.swing.JFrame {
         initComponents();
         initDB();
         initMenuNavigation();
-        loadRekapBulanan();
+        initCustomRekapUI();
+    }
+
+    private void initCustomRekapUI() {
+        // Tambahkan tombol navigasi Kembali di baris atas
+        javax.swing.JButton btnKembali = new javax.swing.JButton("← Kembali ke Dashboard");
+        btnKembali.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 12));
+        btnKembali.setBackground(new java.awt.Color(220, 53, 69));
+        btnKembali.setForeground(java.awt.Color.WHITE);
+        btnKembali.addActionListener(e -> {
+            if (SessionManager.loggedRoleId == 2) {
+                new Dashboard_user().setVisible(true);
+            } else {
+                new Dashboard_Admin().setVisible(true);
+            }
+            this.dispose();
+        });
+
+        // Tombol switch tampilan rekap
+        javax.swing.JButton btnRekapPeminjaman = new javax.swing.JButton("Statistik Populer & Paling Sedikit");
+        btnRekapPeminjaman.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 12));
+        btnRekapPeminjaman.setBackground(new java.awt.Color(0, 123, 255));
+        btnRekapPeminjaman.setForeground(java.awt.Color.WHITE);
+        btnRekapPeminjaman.addActionListener(e -> loadRekapBukuPopuler());
+
+        javax.swing.JButton btnRekapBulan = new javax.swing.JButton("Rekap Bulanan");
+        btnRekapBulan.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 12));
+        btnRekapBulan.setBackground(new java.awt.Color(40, 167, 69));
+        btnRekapBulan.setForeground(java.awt.Color.WHITE);
+        btnRekapBulan.addActionListener(e -> loadRekapBulanan());
+
+        javax.swing.JPanel topBar = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 10, 5));
+        topBar.setOpaque(false);
+        topBar.add(btnKembali);
+        topBar.add(btnRekapPeminjaman);
+        topBar.add(btnRekapBulan);
+
+        jPanel1.add(topBar, 0);
+
+        // Langsung tampilkan statistik buku paling banyak & paling sedikit dipinjam
+        loadRekapBukuPopuler();
+    }
+
+    private void loadRekapBukuPopuler() {
+        jLabel1.setText("Rekapitulasi: Buku Paling Banyak & Sedikit Dipinjam");
+        DefaultTableModel model = new DefaultTableModel(
+            new String[]{"Peringkat / Status", "Kode Buku", "Judul Buku", "Total Kali Dipinjam"}, 0
+        ) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
+
+        try {
+            if (con == null || con.isClosed()) initDB();
+
+            // Query buku terpinjam terurut dari terbanyak ke tersedikit
+            String sql = "SELECT kode_buku, judul_buku, COUNT(*) AS total_pinjam "
+                       + "FROM peminjaman "
+                       + "WHERE kode_buku IS NOT NULL AND kode_buku != '' "
+                       + "GROUP BY kode_buku, judul_buku "
+                       + "ORDER BY total_pinjam DESC";
+
+            try (Statement st = con.createStatement(); ResultSet rs = st.executeQuery(sql)) {
+                java.util.List<Object[]> rows = new java.util.ArrayList<>();
+                while (rs.next()) {
+                    rows.add(new Object[]{
+                        "",
+                        rs.getString("kode_buku"),
+                        rs.getString("judul_buku"),
+                        rs.getInt("total_pinjam")
+                    });
+                }
+
+                if (!rows.isEmpty()) {
+                    int maxPinjam = (int) rows.get(0)[3];
+                    int minPinjam = (int) rows.get(rows.size() - 1)[3];
+
+                    for (int i = 0; i < rows.size(); i++) {
+                        Object[] row = rows.get(i);
+                        int count = (int) row[3];
+                        String statusKet = "Rank #" + (i + 1);
+                        if (count == maxPinjam) {
+                            statusKet += " 🔥 (Paling Banyak)";
+                        } else if (count == minPinjam) {
+                            statusKet += " 💤 (Paling Sedikit)";
+                        }
+                        row[0] = statusKet;
+                        model.addRow(row);
+                    }
+                } else {
+                    model.addRow(new Object[]{"-", "-", "Belum ada data peminjaman", 0});
+                }
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal memuat rekap: " + e.getMessage());
+        }
+        jTable1.setModel(model);
     }
 
     private void initDB() {

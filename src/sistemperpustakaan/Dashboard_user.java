@@ -18,6 +18,53 @@ public class Dashboard_user extends javax.swing.JFrame {
      */
     public Dashboard_user() {
         initComponents();
+        initCustomUI();
+    }
+
+    private void initCustomUI() {
+        // Tampilkan profil pengguna di pojok atas / judul
+        String nama = SessionManager.isLoggedIn() ? SessionManager.loggedNamaLengkap : "User";
+        String role = SessionManager.isLoggedIn() ? SessionManager.loggedRole : "Siswa";
+        jLabel1.setText("Halo, " + nama);
+        jLabel1.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 22));
+
+        // Panel Profile Bar di panel2 bawah logo
+        javax.swing.JPanel profileCard = new javax.swing.JPanel();
+        profileCard.setBackground(new java.awt.Color(230, 245, 230));
+        profileCard.setBorder(javax.swing.BorderFactory.createTitledBorder("Profil Akun"));
+        profileCard.setLayout(new java.awt.GridLayout(3, 1, 2, 2));
+        
+        javax.swing.JLabel lblUser = new javax.swing.JLabel("  User: " + (SessionManager.isLoggedIn() ? SessionManager.loggedUsername : "-"));
+        javax.swing.JLabel lblNama = new javax.swing.JLabel("  Nama: " + nama);
+        javax.swing.JLabel lblRole = new javax.swing.JLabel("  Role: " + role);
+        lblUser.setFont(new java.awt.Font("Segoe UI", java.awt.Font.PLAIN, 12));
+        lblNama.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 12));
+        lblRole.setFont(new java.awt.Font("Segoe UI", java.awt.Font.ITALIC, 11));
+        profileCard.add(lblNama);
+        profileCard.add(lblUser);
+        profileCard.add(lblRole);
+
+        // Tambah Tombol Pengembalian dan Denda di samping / di bawah
+        javax.swing.JButton btnPengembalian = new javax.swing.JButton("Pengembalian");
+        btnPengembalian.setFont(new java.awt.Font("Segoe UI Black", 1, 18));
+        btnPengembalian.setBackground(new java.awt.Color(102, 204, 255));
+        btnPengembalian.addActionListener(e -> {
+            new Form_pengembalian().setVisible(true);
+            this.dispose();
+        });
+
+        javax.swing.JButton btnDenda = new javax.swing.JButton("Info Denda");
+        btnDenda.setFont(new java.awt.Font("Segoe UI Black", 1, 18));
+        btnDenda.setBackground(new java.awt.Color(255, 153, 153));
+        btnDenda.addActionListener(e -> {
+            new Form_Denda().setVisible(true);
+            this.dispose();
+        });
+
+        // Letakkan tombol baru dan profil pada panel
+        jPanel2.add(profileCard);
+        jPanel1.add(btnPengembalian);
+        jPanel1.add(btnDenda);
     }
 
     /**

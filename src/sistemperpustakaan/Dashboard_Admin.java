@@ -18,6 +18,62 @@ public class Dashboard_Admin extends javax.swing.JFrame {
      */
     public Dashboard_Admin() {
         initComponents();
+        initCustomUI();
+    }
+
+    private void initCustomUI() {
+        // Tampilkan profil pengguna admin di judul / panel
+        String nama = SessionManager.isLoggedIn() ? SessionManager.loggedNamaLengkap : "Admin/Petugas";
+        String role = SessionManager.isLoggedIn() ? SessionManager.loggedRole : "Petugas";
+        jLabel1.setText("Halo, " + nama);
+        jLabel1.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 22));
+
+        // Panel Profile Bar di jPanel2 bawah logo
+        javax.swing.JPanel profileCard = new javax.swing.JPanel();
+        profileCard.setBackground(new java.awt.Color(245, 245, 230));
+        profileCard.setBorder(javax.swing.BorderFactory.createTitledBorder("Profil Petugas"));
+        profileCard.setLayout(new java.awt.GridLayout(3, 1, 2, 2));
+        
+        javax.swing.JLabel lblUser = new javax.swing.JLabel("  User: " + (SessionManager.isLoggedIn() ? SessionManager.loggedUsername : "-"));
+        javax.swing.JLabel lblNama = new javax.swing.JLabel("  Nama: " + nama);
+        javax.swing.JLabel lblRole = new javax.swing.JLabel("  Role: " + role);
+        lblUser.setFont(new java.awt.Font("Segoe UI", java.awt.Font.PLAIN, 12));
+        lblNama.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 12));
+        lblRole.setFont(new java.awt.Font("Segoe UI", java.awt.Font.ITALIC, 11));
+        profileCard.add(lblNama);
+        profileCard.add(lblUser);
+        profileCard.add(lblRole);
+
+        // Tambah Tombol Laporan, Pengembalian, dan Denda di Dashboard Admin
+        javax.swing.JButton btnLaporan = new javax.swing.JButton("Laporan Rekap");
+        btnLaporan.setFont(new java.awt.Font("Segoe UI Black", 1, 18));
+        btnLaporan.setBackground(new java.awt.Color(255, 204, 102));
+        btnLaporan.addActionListener(e -> {
+            new Form_laporan().setVisible(true);
+            this.dispose();
+        });
+
+        javax.swing.JButton btnPengembalian = new javax.swing.JButton("Pengembalian");
+        btnPengembalian.setFont(new java.awt.Font("Segoe UI Black", 1, 18));
+        btnPengembalian.setBackground(new java.awt.Color(102, 204, 255));
+        btnPengembalian.addActionListener(e -> {
+            new Form_pengembalian().setVisible(true);
+            this.dispose();
+        });
+
+        javax.swing.JButton btnDenda = new javax.swing.JButton("Kelola Denda");
+        btnDenda.setFont(new java.awt.Font("Segoe UI Black", 1, 18));
+        btnDenda.setBackground(new java.awt.Color(255, 153, 153));
+        btnDenda.addActionListener(e -> {
+            new Form_Denda().setVisible(true);
+            this.dispose();
+        });
+
+        // Masukkan elemen ke jPanel
+        jPanel2.add(profileCard);
+        jPanel1.add(btnLaporan);
+        jPanel1.add(btnPengembalian);
+        jPanel1.add(btnDenda);
     }
 
     /**
