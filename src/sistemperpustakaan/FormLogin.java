@@ -27,7 +27,9 @@ public class FormLogin extends javax.swing.JFrame {
         
         try {
             con = Config.configDB();
-            stat = con.createStatement();
+            if (con != null) {
+                stat = con.createStatement();
+            }
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, e.getMessage());
         }
